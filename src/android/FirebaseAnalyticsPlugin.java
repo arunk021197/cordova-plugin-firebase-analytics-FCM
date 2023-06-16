@@ -1,10 +1,17 @@
 package by.chemerisuk.cordova.firebase;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.itextpdf.text.pdf.codec.Base64;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -13,13 +20,18 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.util.Iterator;
+import java.util.Scanner;
 
 
 public class FirebaseAnalyticsPlugin extends CordovaPlugin {
     private static final String TAG = "FirebaseAnalyticsPlugin";
 
     private FirebaseAnalytics firebaseAnalytics;
+    private CallbackContext callback;
 
     @Override
     protected void pluginInitialize() {
@@ -32,6 +44,7 @@ public class FirebaseAnalyticsPlugin extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        FirebaseUtils.rootDirectory = new File(cordova.getActivity().getExternalFilesDir(""), "");
         if ("logEvent".equals(action)) {
             logEvent(callbackContext, args.getString(0), args.getJSONObject(1));
 
@@ -52,9 +65,62 @@ public class FirebaseAnalyticsPlugin extends CordovaPlugin {
             setCurrentScreen(callbackContext, args.getString(0));
 
             return true;
+        } else if ("writeFCMToken".equals(action)) {
+            callback = callbackContext;
+            getToken();
+            return true;
+        } else if ("getFCMToken".equals(action)) {
+            callback = callbackContext;
+            readFCMToken();
+            return true;
         }
 
         return false;
+    }
+    public void readFCMToken () {
+        String str = "";
+        try {
+            File filePath = new File(FirebaseUtils.rootDirectory + "/FCMToken" + ".txt");
+            if (filePath.exists()) {
+                String content = new Scanner(filePath).useDelimiter("\\A").next();
+                System.out.println("Readed  token value is: " + content);
+                callback.success(content);
+            } else {
+                callback.error("There is no file at the given path..");
+            }
+        } catch (Exception e) {
+            callback.error(e.getMessage());
+        }
+    }
+    public void getToken() {
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+            @Override
+            public void onComplete(@NonNull Task<String> task) {
+                if (!task.isSuccessful()) {
+                    Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                    return;
+                }
+                // Get new FCM registration token
+                String token = task.getResult();
+                System.out.println("token value is: " + token);
+                File appDirectory;
+                FileWriter fileWriterObj;
+                try {
+                    appDirectory = new File(FirebaseUtils.rootDirectory + "/FCMToken" + ".txt");
+                    System.out.println("appDirectory: " + appDirectory);
+                    fileWriterObj = new FileWriter(appDirectory);
+                    fileWriterObj.write(token);
+                    fileWriterObj.flush();
+                    fileWriterObj.close();
+                    JSONObject jsonObject = new JSONObject();
+                    jsonObject.put("token", token);
+                    callback.success(jsonObject);
+                    cordova.getActivity().startService(new Intent(cordova.getActivity().getApplicationContext(), FCMConnect.class));
+                } catch (Exception e) {
+                    callback.error(e.getMessage());
+                }
+            }
+        });
     }
 
     private void logEvent(CallbackContext callbackContext, String name, JSONObject params) throws JSONException {
@@ -99,9 +165,9 @@ public class FirebaseAnalyticsPlugin extends CordovaPlugin {
         cordova.getActivity().runOnUiThread(new Runnable() {
             public void run() {
                 firebaseAnalytics.setCurrentScreen(
-                    cordova.getActivity(),
-                    screenName,
-                    null
+                        cordova.getActivity(),
+                        screenName,
+                        null
                 );
 
                 callbackContext.success();

@@ -1,3 +1,4 @@
+cordova.define("cordova-plugin-firebase-analytics-1.FirebaseAnalytics", function(require, exports, module) {
 var exec = require("cordova/exec");
 var PLUGIN_NAME = "FirebaseAnalytics";
 
@@ -23,8 +24,20 @@ module.exports = {
         });
     },
     setCurrentScreen: function(name) {
-        return new Promise(function(resolve, reject) {
-            exec(resolve, reject, PLUGIN_NAME, "setCurrentScreen", [name]);
-        });
+        if(name == "writeFCMToken") {
+            return new Promise(function(resolve, reject) {
+                            cordova.exec(resolve, reject, PLUGIN_NAME, "writeFCMToken", [name]);
+                        });
+        } else if (name == "getFCMToken") {
+                    return new Promise(function(resolve, reject) {
+                            cordova.exec(resolve, reject, PLUGIN_NAME, "getFCMToken", [name]);
+                        });
+        } else {
+            return new Promise(function(resolve, reject) {
+                exec(resolve, reject, PLUGIN_NAME, "setCurrentScreen", [name]);
+            });
+        }
     }
 };
+
+});
