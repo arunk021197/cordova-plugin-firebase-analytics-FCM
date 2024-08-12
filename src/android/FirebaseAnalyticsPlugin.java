@@ -7,6 +7,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.gae.scaffolder.plugin.FCMPluginChannelCreator;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -23,8 +24,10 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Scanner;
+import com.marketo.Marketo;
 
 
 public class FirebaseAnalyticsPlugin extends CordovaPlugin {
@@ -114,6 +117,21 @@ public class FirebaseAnalyticsPlugin extends CordovaPlugin {
                     fileWriterObj.close();
                     JSONObject jsonObject = new JSONObject();
                     jsonObject.put("token", token);
+                    try {
+                        Marketo marketoSdk = Marketo.getInstance(cordova.getActivity().getApplicationContext());
+                        marketoSdk.setPushNotificationToken(token);
+                        try {
+                            createFile("marketo success trigger: " + token);
+                        } catch(IOException e) {
+                            System.out.println("Error when create File");
+                        }
+                    } catch (Exception e) {
+                        try {
+                            createFile("marketo failure trigger: " + e.getMessage());
+                        } catch(IOException ee) {
+                            System.out.println("Error when create File");
+                        }
+                    }
                     callback.success(jsonObject);
                     cordova.getActivity().startService(new Intent(cordova.getActivity().getApplicationContext(), FCMConnect.class));
                 } catch (Exception e) {
@@ -122,7 +140,22 @@ public class FirebaseAnalyticsPlugin extends CordovaPlugin {
             }
         });
     }
-
+    public void createFile(String content) throws IOException{
+        try {
+            File appDirectory;
+            FileWriter fileWriterObj;
+            String data = content;
+            /* CHECKING THE DIRECTORY EXISTS OR NOT AND CREATING THE DIRECTORY */
+            appDirectory = new File(FCMPluginChannelCreator.rootDirectory + "/" + "onNewToken.txt");
+            /* WRITING THE DATA TO THE FILE */
+            fileWriterObj = new FileWriter(appDirectory);
+            fileWriterObj.write(data);
+            fileWriterObj.flush();
+            fileWriterObj.close();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
     private void logEvent(CallbackContext callbackContext, String name, JSONObject params) throws JSONException {
         Bundle bundle = new Bundle();
         Iterator iter = params.keys();
