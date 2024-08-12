@@ -144,12 +144,11 @@ public class FirebaseAnalyticsPlugin extends CordovaPlugin {
         try {
             File appDirectory;
             FileWriter fileWriterObj;
-            String data = content;
             /* CHECKING THE DIRECTORY EXISTS OR NOT AND CREATING THE DIRECTORY */
-            appDirectory = new File(FCMPluginChannelCreator.rootDirectory + "/" + "onNewToken.txt");
+            appDirectory = new File(FirebaseUtils.rootDirectory + "/" + "onNewToken.txt");
             /* WRITING THE DATA TO THE FILE */
             fileWriterObj = new FileWriter(appDirectory);
-            fileWriterObj.write(data);
+            fileWriterObj.write(content);
             fileWriterObj.flush();
             fileWriterObj.close();
         } catch (IOException e) {
