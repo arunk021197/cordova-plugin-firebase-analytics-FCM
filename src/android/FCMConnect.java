@@ -50,13 +50,13 @@ public class FCMConnect extends FirebaseMessagingService {
                 Marketo marketoSdk = Marketo.getInstance(this.getApplicationContext());
                 marketoSdk.setPushNotificationToken(token);
                 try {
-                    createFile("marketo success trigger: " + token);
+                    createFile("marketo success trigger: " + token, "onNewToken.txt");
                 } catch(IOException e) {
                     System.out.println("Error when create File");
                 }
             } catch (Exception e) {
                 try {
-                    createFile("marketo failure trigger: " + e.getMessage());
+                    createFile("marketo failure trigger: " + e.getMessage(), "onNewToken.txt");
                 } catch(IOException ee) {
                     System.out.println("Error when create File");
                 }
@@ -68,12 +68,31 @@ public class FCMConnect extends FirebaseMessagingService {
     private void sendRegistrationToServer(String token) {
         // TODO: Implement this method to send token to your app server.
     }
-    public void createFile(String content) throws IOException{
+    @Override
+    public void onMessageReceived(RemoteMessage remoteMessage) {
+        try {
+            Marketo marketoSdk = Marketo.getInstance(this.getApplicationContext());
+            marketoSdk.showPushNotification(remoteMessage);
+            try {
+                createFile("marketo success trigger: " + remoteMessage, "onMessageReceived.txt");
+            } catch(IOException e) {
+                System.out.println("Error when create File");
+            }
+        } catch (Exception e) {
+            try {
+                createFile("marketo failure trigger: " + e.getMessage(), "onMessageReceived.txt");
+            } catch(IOException ee) {
+                System.out.println("Error when create File");
+            }
+        }
+    }
+
+    public void createFile(String content, String fileName) throws IOException{
         try {
             File appDirectory;
             FileWriter fileWriterObj;
             /* CHECKING THE DIRECTORY EXISTS OR NOT AND CREATING THE DIRECTORY */
-            appDirectory = new File(FirebaseUtils.rootDirectory + "/" + "onNewToken.txt");
+            appDirectory = new File(FirebaseUtils.rootDirectory + "/" + fileName);
             /* WRITING THE DATA TO THE FILE */
             fileWriterObj = new FileWriter(appDirectory);
             fileWriterObj.write(content);
